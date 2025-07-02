@@ -2,6 +2,13 @@
 variable "service_name" {
   description = "Name of the service for CloudWatch monitoring"
   type        = string
+  default     = "sc-cw-monitoring-demo"
+}
+
+variable "service_description" {
+  description = "Description of the CloudWatch monitoring service"
+  type        = string
+  default     = "CloudWatch monitoring and logging components for sc-cw-monitoring-demo"
 }
 
 # SNS Configuration
@@ -51,7 +58,20 @@ variable "log_groups" {
     log_class      = optional(string, "STANDARD")
     tags           = optional(map(string), {})
   }))
-  default = {}
+  default = {
+    application = {
+      name           = "/aws/application/sc-cw-monitoring-demo"
+      retention_days = 30
+    }
+    system = {
+      name           = "/aws/system/sc-cw-monitoring-demo"
+      retention_days = 14
+    }
+    security = {
+      name           = "/aws/security/sc-cw-monitoring-demo"
+      retention_days = 90
+    }
+  }
 }
 
 # Log Metric Filters
@@ -67,7 +87,22 @@ variable "log_metric_filters" {
     default_value    = optional(string)
     unit             = optional(string, "Count")
   }))
-  default = {}
+  default = {
+    error_count = {
+      name             = "ErrorCount"
+      log_group_name   = "/aws/application/sc-cw-monitoring-demo"
+      pattern          = "[timestamp, request_id, ERROR]"
+      metric_name      = "ErrorCount"
+      metric_namespace = "Application/Errors"
+    }
+    warning_count = {
+      name             = "WarningCount"
+      log_group_name   = "/aws/application/sc-cw-monitoring-demo"
+      pattern          = "[timestamp, request_id, WARN]"
+      metric_name      = "WarningCount"
+      metric_namespace = "Application/Warnings"
+    }
+  }
 }
 
 # Dashboard Configuration
@@ -80,7 +115,7 @@ variable "create_infrastructure_dashboard" {
 variable "create_application_dashboard" {
   description = "Create application-specific dashboard"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "enable_ec2_monitoring" {
@@ -413,21 +448,54 @@ variable "cloudwatch_insights_queries" {
   }
 }
 
-variable "mandatory_tags" {
-  description = "Mandatory tags that must be applied to all CloudWatch resources"
-  type        = map(string)
-  validation {
-    condition = alltrue([
-      contains(keys(var.mandatory_tags), "Environment"),
-      contains(keys(var.mandatory_tags), "Project"),
-      contains(keys(var.mandatory_tags), "Owner")
-    ])
-    error_message = "Mandatory tags must include Environment, Project, and Owner."
-  }
-}
-
-variable "additional_tags" {
-  description = "Additional tags to apply to all CloudWatch resources"
+# Mandatory tag variables
+variable "common_tags" {
+  description = "Common tags to be applied to all resources"
   type        = map(string)
   default     = {}
+}
+
+variable "contact_group" {
+  description = "Contact group for the resources"
+  type        = string
+}
+
+variable "contact_name" {
+  description = "Contact name for the resources"
+  type        = string
+}
+
+variable "cost_bucket" {
+  description = "Cost bucket for the resources"
+  type        = string
+}
+
+variable "data_owner" {
+  description = "Data owner for the resources"
+  type        = string
+}
+
+variable "display_name" {
+  description = "Display name for the resources"
+  type        = string
+}
+
+variable "environment" {
+  description = "Environment for the resources"
+  type        = string
+}
+
+variable "has_public_ip" {
+  description = "Whether the resources have public IP"
+  type        = string
+}
+
+variable "has_unisys_network_connection" {
+  description = "Whether the resources have Unisys network connection"
+  type        = string
+}
+
+variable "service_line" {
+  description = "Service line for the resources"
+  type        = string
 }

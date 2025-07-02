@@ -2,6 +2,7 @@
 variable "state_machine_name" {
   description = "Name of the Step Functions state machine"
   type        = string
+  default     = "sc-stepfn-demo"
 }
 
 variable "definition" {
@@ -34,7 +35,7 @@ variable "custom_policy" {
 variable "enable_logging" {
   description = "Enable CloudWatch logging"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "log_level" {
@@ -62,24 +63,99 @@ variable "log_retention_days" {
 variable "enable_tracing" {
   description = "Enable X-Ray tracing"
   type        = bool
+  default     = true
+}
+
+variable "enable_encryption" {
+  description = "Enable encryption for the state machine"
+  type        = bool
+  default     = true
+}
+
+variable "kms_key_id" {
+  description = "KMS key ID for encryption (if not provided, AWS managed key will be used)"
+  type        = string
+  default     = null
+}
+
+variable "publish_version" {
+  description = "Publish a version of the state machine during creation"
+  type        = bool
   default     = false
 }
 
-variable "mandatory_tags" {
-  description = "Mandatory tags that must be applied to all Step Functions resources"
-  type        = map(string)
-  validation {
-    condition = alltrue([
-      contains(keys(var.mandatory_tags), "Environment"),
-      contains(keys(var.mandatory_tags), "Project"),
-      contains(keys(var.mandatory_tags), "Owner")
-    ])
-    error_message = "Mandatory tags must include Environment, Project, and Owner."
-  }
-}
-
-variable "additional_tags" {
-  description = "Additional tags to apply to all Step Functions resources"
+variable "lambda_functions" {
+  description = "Map of Lambda function ARNs that the state machine can invoke"
   type        = map(string)
   default     = {}
+}
+
+variable "sns_topics" {
+  description = "List of SNS topic ARNs that the state machine can publish to"
+  type        = list(string)
+  default     = []
+}
+
+variable "sqs_queues" {
+  description = "List of SQS queue ARNs that the state machine can send messages to"
+  type        = list(string)
+  default     = []
+}
+
+variable "s3_buckets" {
+  description = "List of S3 bucket ARNs that the state machine can access"
+  type        = list(string)
+  default     = []
+}
+
+# Mandatory tag variables
+variable "common_tags" {
+  description = "Common tags to be applied to all resources"
+  type        = map(string)
+  default     = {}
+}
+
+variable "contact_group" {
+  description = "Contact group for the resources"
+  type        = string
+}
+
+variable "contact_name" {
+  description = "Contact name for the resources"
+  type        = string
+}
+
+variable "cost_bucket" {
+  description = "Cost bucket for the resources"
+  type        = string
+}
+
+variable "data_owner" {
+  description = "Data owner for the resources"
+  type        = string
+}
+
+variable "display_name" {
+  description = "Display name for the resources"
+  type        = string
+}
+
+variable "environment" {
+  description = "Environment for the resources"
+  type        = string
+}
+
+variable "has_public_ip" {
+  description = "Whether the resources have public IP"
+  type        = string
+}
+
+variable "has_unisys_network_connection" {
+  description = "Whether the resources have Unisys network connection"
+  type        = string
+}
+
+variable "service_line" {
+  description = "Service line for the resources"
+  type        = string
 }

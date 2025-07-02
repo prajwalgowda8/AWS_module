@@ -8,6 +8,21 @@ terraform {
   }
 }
 
+# Local tags configuration
+locals {
+  mandatory_tags = merge(var.common_tags, {
+    contactGroup                = var.contact_group
+    contactName                 = var.contact_name
+    costBucket                  = var.cost_bucket
+    dataOwner                   = var.data_owner
+    displayName                 = var.display_name
+    environment                 = var.environment
+    hasPublicIP                 = var.has_public_ip
+    hasUnisysNetworkConnection  = var.has_unisys_network_connection
+    serviceLine                 = var.service_line
+  })
+}
+
 # Data sources
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
@@ -37,10 +52,10 @@ resource "aws_sns_topic" "cloudwatch_alerts" {
   })
 
   tags = merge(
-    var.mandatory_tags,
-    var.additional_tags,
+    local.mandatory_tags,
     {
-      Name = "${var.service_name}-cloudwatch-alerts"
+      Name    = "${var.service_name}-cloudwatch-alerts"
+      Purpose = "CloudWatch monitoring alerts"
     }
   )
 }
@@ -80,11 +95,11 @@ resource "aws_cloudwatch_log_group" "application_logs" {
   log_group_class   = each.value.log_class
 
   tags = merge(
-    var.mandatory_tags,
-    var.additional_tags,
+    local.mandatory_tags,
     each.value.tags,
     {
-      Name = each.value.name
+      Name    = each.value.name
+      Purpose = "Log group for ${var.service_name}"
     }
   )
 }
@@ -104,6 +119,8 @@ resource "aws_cloudwatch_log_metric_filter" "custom_metrics" {
     default_value = each.value.default_value
     unit          = each.value.unit
   }
+
+  depends_on = [aws_cloudwatch_log_group.application_logs]
 }
 
 # CloudWatch Dashboards
@@ -133,7 +150,7 @@ resource "aws_cloudwatch_dashboard" "infrastructure_dashboard" {
             view    = "timeSeries"
             stacked = false
             region  = data.aws_region.current.name
-            title   = "EC2 Instance Metrics"
+            title   = "EC2 Instance Metrics - ${var.service_name}"
             period  = 300
           }
         }
@@ -157,7 +174,7 @@ resource "aws_cloudwatch_dashboard" "infrastructure_dashboard" {
             view    = "timeSeries"
             stacked = false
             region  = data.aws_region.current.name
-            title   = "RDS Database Metrics"
+            title   = "RDS Database Metrics - ${var.service_name}"
             period  = 300
           }
         }
@@ -181,7 +198,7 @@ resource "aws_cloudwatch_dashboard" "infrastructure_dashboard" {
             view    = "timeSeries"
             stacked = false
             region  = data.aws_region.current.name
-            title   = "Lambda Function Metrics"
+            title   = "Lambda Function Metrics - ${var.service_name}"
             period  = 300
           }
         }
@@ -202,7 +219,7 @@ resource "aws_cloudwatch_dashboard" "infrastructure_dashboard" {
             view    = "timeSeries"
             stacked = false
             region  = data.aws_region.current.name
-            title   = "EKS Cluster Metrics"
+            title   = "EKS Cluster Metrics - ${var.service_name}"
             period  = 300
           }
         }
@@ -254,14 +271,13 @@ resource "aws_cloudwatch_metric_alarm" "high_cpu" {
   period              = var.cpu_alarm_period
   statistic           = "Average"
   threshold           = var.cpu_alarm_threshold
-  alarm_description   = "This metric monitors EC2 CPU utilization"
+  alarm_description   = "This metric monitors EC2 CPU utilization for ${var.service_name}"
   alarm_actions       = var.create_sns_topic ? [aws_sns_topic.cloudwatch_alerts[0].arn] : var.external_alarm_actions
 
   dimensions = var.cpu_alarm_dimensions
 
   tags = merge(
-    var.mandatory_tags,
-    var.additional_tags,
+    local.mandatory_tags,
     {
       Name = "${var.service_name}-high-cpu-alarm"
     }
@@ -279,14 +295,13 @@ resource "aws_cloudwatch_metric_alarm" "high_memory" {
   period              = var.memory_alarm_period
   statistic           = "Average"
   threshold           = var.memory_alarm_threshold
-  alarm_description   = "This metric monitors memory utilization"
+  alarm_description   = "This metric monitors memory utilization for ${var.service_name}"
   alarm_actions       = var.create_sns_topic ? [aws_sns_topic.cloudwatch_alerts[0].arn] : var.external_alarm_actions
 
   dimensions = var.memory_alarm_dimensions
 
   tags = merge(
-    var.mandatory_tags,
-    var.additional_tags,
+    local.mandatory_tags,
     {
       Name = "${var.service_name}-high-memory-alarm"
     }
@@ -304,14 +319,13 @@ resource "aws_cloudwatch_metric_alarm" "disk_space" {
   period              = var.disk_alarm_period
   statistic           = "Average"
   threshold           = var.disk_alarm_threshold
-  alarm_description   = "This metric monitors available disk space"
+  alarm_description   = "This metric monitors available disk space for ${var.service_name}"
   alarm_actions       = var.create_sns_topic ? [aws_sns_topic.cloudwatch_alerts[0].arn] : var.external_alarm_actions
 
   dimensions = var.disk_alarm_dimensions
 
   tags = merge(
-    var.mandatory_tags,
-    var.additional_tags,
+    local.mandatory_tags,
     {
       Name = "${var.service_name}-low-disk-space-alarm"
     }
@@ -330,14 +344,13 @@ resource "aws_cloudwatch_metric_alarm" "rds_cpu" {
   period              = var.rds_cpu_period
   statistic           = "Average"
   threshold           = var.rds_cpu_threshold
-  alarm_description   = "This metric monitors RDS CPU utilization"
+  alarm_description   = "This metric monitors RDS CPU utilization for ${var.service_name}"
   alarm_actions       = var.create_sns_topic ? [aws_sns_topic.cloudwatch_alerts[0].arn] : var.external_alarm_actions
 
   dimensions = var.rds_alarm_dimensions
 
   tags = merge(
-    var.mandatory_tags,
-    var.additional_tags,
+    local.mandatory_tags,
     {
       Name = "${var.service_name}-rds-high-cpu-alarm"
     }
@@ -355,14 +368,13 @@ resource "aws_cloudwatch_metric_alarm" "rds_connections" {
   period              = var.rds_connections_period
   statistic           = "Average"
   threshold           = var.rds_connections_threshold
-  alarm_description   = "This metric monitors RDS database connections"
+  alarm_description   = "This metric monitors RDS database connections for ${var.service_name}"
   alarm_actions       = var.create_sns_topic ? [aws_sns_topic.cloudwatch_alerts[0].arn] : var.external_alarm_actions
 
   dimensions = var.rds_alarm_dimensions
 
   tags = merge(
-    var.mandatory_tags,
-    var.additional_tags,
+    local.mandatory_tags,
     {
       Name = "${var.service_name}-rds-high-connections-alarm"
     }
@@ -381,14 +393,13 @@ resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
   period              = var.lambda_error_period
   statistic           = "Sum"
   threshold           = var.lambda_error_threshold
-  alarm_description   = "This metric monitors Lambda function errors"
+  alarm_description   = "This metric monitors Lambda function errors for ${var.service_name}"
   alarm_actions       = var.create_sns_topic ? [aws_sns_topic.cloudwatch_alerts[0].arn] : var.external_alarm_actions
 
   dimensions = var.lambda_alarm_dimensions
 
   tags = merge(
-    var.mandatory_tags,
-    var.additional_tags,
+    local.mandatory_tags,
     {
       Name = "${var.service_name}-lambda-errors-alarm"
     }
@@ -406,14 +417,13 @@ resource "aws_cloudwatch_metric_alarm" "lambda_duration" {
   period              = var.lambda_duration_period
   statistic           = "Average"
   threshold           = var.lambda_duration_threshold
-  alarm_description   = "This metric monitors Lambda function duration"
+  alarm_description   = "This metric monitors Lambda function duration for ${var.service_name}"
   alarm_actions       = var.create_sns_topic ? [aws_sns_topic.cloudwatch_alerts[0].arn] : var.external_alarm_actions
 
   dimensions = var.lambda_alarm_dimensions
 
   tags = merge(
-    var.mandatory_tags,
-    var.additional_tags,
+    local.mandatory_tags,
     {
       Name = "${var.service_name}-lambda-duration-alarm"
     }
@@ -442,8 +452,7 @@ resource "aws_cloudwatch_metric_alarm" "custom_alarms" {
   ok_actions               = each.value.ok_actions
 
   tags = merge(
-    var.mandatory_tags,
-    var.additional_tags,
+    local.mandatory_tags,
     each.value.tags,
     {
       Name = each.value.alarm_name
@@ -456,15 +465,14 @@ resource "aws_cloudwatch_composite_alarm" "application_health" {
   count = var.create_composite_alarm ? 1 : 0
 
   alarm_name        = "${var.service_name}-application-health"
-  alarm_description = "Composite alarm for overall application health"
+  alarm_description = "Composite alarm for overall application health of ${var.service_name}"
   alarm_rule        = var.composite_alarm_rule
 
   actions_enabled = true
   alarm_actions   = var.create_sns_topic ? [aws_sns_topic.cloudwatch_alerts[0].arn] : var.external_alarm_actions
 
   tags = merge(
-    var.mandatory_tags,
-    var.additional_tags,
+    local.mandatory_tags,
     {
       Name = "${var.service_name}-application-health-composite"
     }
@@ -480,8 +488,7 @@ resource "aws_cloudwatch_event_rule" "scheduled_health_check" {
   schedule_expression = var.health_check_schedule
 
   tags = merge(
-    var.mandatory_tags,
-    var.additional_tags,
+    local.mandatory_tags,
     {
       Name = "${var.service_name}-scheduled-health-check"
     }
@@ -505,8 +512,7 @@ resource "aws_ssm_parameter" "cloudwatch_insights_queries" {
   value = each.value
 
   tags = merge(
-    var.mandatory_tags,
-    var.additional_tags,
+    local.mandatory_tags,
     {
       Name = "${var.service_name}-insights-${each.key}"
     }
