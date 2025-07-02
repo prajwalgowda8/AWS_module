@@ -2,144 +2,131 @@
 # EKS Outputs
 output "eks_cluster_id" {
   description = "EKS cluster ID"
-  value       = module.eks.cluster_id
-}
-
-output "eks_cluster_arn" {
-  description = "EKS cluster ARN"
-  value       = module.eks.cluster_arn
+  value       = try(module.eks[0].cluster_id, null)
 }
 
 output "eks_cluster_endpoint" {
   description = "EKS cluster endpoint"
-  value       = module.eks.cluster_endpoint
+  value       = try(module.eks[0].cluster_endpoint, null)
 }
 
 output "eks_cluster_security_group_id" {
   description = "EKS cluster security group ID"
-  value       = module.eks.cluster_security_group_id
+  value       = try(module.eks[0].cluster_security_group_id, null)
 }
 
 # RDS Outputs
 output "rds_instance_id" {
   description = "RDS instance ID"
-  value       = module.rds_postgres.db_instance_id
+  value       = try(module.rds[0].instance_id, null)
 }
 
-output "rds_instance_endpoint" {
+output "rds_endpoint" {
   description = "RDS instance endpoint"
-  value       = module.rds_postgres.db_instance_endpoint
+  value       = try(module.rds[0].endpoint, null)
   sensitive   = true
 }
 
-output "rds_instance_port" {
+output "rds_port" {
   description = "RDS instance port"
-  value       = module.rds_postgres.db_instance_port
+  value       = try(module.rds[0].port, null)
 }
 
 # S3 Outputs
 output "s3_bucket_id" {
   description = "S3 bucket ID"
-  value       = module.s3_bucket.bucket_id
+  value       = try(module.s3[0].bucket_id, null)
 }
 
 output "s3_bucket_arn" {
   description = "S3 bucket ARN"
-  value       = module.s3_bucket.bucket_arn
-}
-
-# Lambda Outputs
-output "lambda_function_arn" {
-  description = "Lambda function ARN"
-  value       = module.lambda.function_arn
-}
-
-output "lambda_function_name" {
-  description = "Lambda function name"
-  value       = module.lambda.function_name
-}
-
-# Glue Outputs
-output "glue_database_name" {
-  description = "Glue catalog database name"
-  value       = module.glue.database_name
-}
-
-output "glue_role_arn" {
-  description = "Glue IAM role ARN"
-  value       = module.glue.glue_role_arn
-}
-
-# Step Functions Outputs
-output "step_functions_state_machine_arn" {
-  description = "Step Functions state machine ARN"
-  value       = module.step_functions.state_machine_arn
-}
-
-# Secrets Manager Outputs
-output "rds_secret_arn" {
-  description = "RDS credentials secret ARN"
-  value       = module.secrets_manager.secret_arn
-  sensitive   = true
-}
-
-# OpenSearch Outputs
-output "opensearch_domain_arn" {
-  description = "OpenSearch domain ARN"
-  value       = module.opensearch.domain_arn
-}
-
-output "opensearch_domain_endpoint" {
-  description = "OpenSearch domain endpoint"
-  value       = module.opensearch.endpoint
-}
-
-# Kendra Outputs
-output "kendra_index_id" {
-  description = "Kendra index ID"
-  value       = module.kendra.index_id
-}
-
-output "kendra_index_arn" {
-  description = "Kendra index ARN"
-  value       = module.kendra.index_arn
+  value       = try(module.s3[0].bucket_arn, null)
 }
 
 # ECR Outputs
 output "ecr_repository_url" {
   description = "ECR repository URL"
-  value       = module.ecr.repository_url
+  value       = try(module.ecr[0].repository_url, null)
 }
 
 output "ecr_repository_arn" {
   description = "ECR repository ARN"
-  value       = module.ecr.repository_arn
+  value       = try(module.ecr[0].repository_arn, null)
 }
 
-# SES Outputs
-output "ses_email_identities" {
-  description = "SES email identities"
-  value       = module.ses.email_identities
+# OpenSearch Outputs
+output "opensearch_domain_endpoint" {
+  description = "OpenSearch domain endpoint"
+  value       = try(module.opensearch[0].domain_endpoint, null)
 }
 
-output "ses_configuration_set_name" {
-  description = "SES configuration set name"
-  value       = module.ses.configuration_set_name
+output "opensearch_domain_arn" {
+  description = "OpenSearch domain ARN"
+  value       = try(module.opensearch[0].domain_arn, null)
 }
 
-# Bedrock Outputs
-output "bedrock_execution_role_arn" {
-  description = "Bedrock execution role ARN"
-  value       = module.bedrock.bedrock_execution_role_arn
+# Lambda Outputs
+output "lambda_function_arn" {
+  description = "Lambda function ARN"
+  value       = try(module.lambda[0].function_arn, null)
+}
+
+output "lambda_function_name" {
+  description = "Lambda function name"
+  value       = try(module.lambda[0].function_name, null)
+}
+
+# Secrets Manager Outputs
+output "secrets_manager_secret_arn" {
+  description = "Secrets Manager secret ARN"
+  value       = try(module.secrets[0].secret_arn, null)
+}
+
+# Step Functions Outputs
+output "step_functions_state_machine_arn" {
+  description = "Step Functions state machine ARN"
+  value       = try(module.step_functions[0].state_machine_arn, null)
 }
 
 # CloudWatch Outputs
-output "cloudwatch_sns_topic_arn" {
-  description = "CloudWatch SNS topic ARN"
-  value       = module.cloudwatch.sns_topic_arn
+output "cloudwatch_log_group_name" {
+  description = "CloudWatch log group name"
+  value       = try(module.cloudwatch[0].log_group_name, null)
 }
 
-output "cloudwatch_log_groups" {
-  description = "CloudWatch log groups"
-  value       = module.cloudwatch.log_groups
+# Bedrock Outputs
+output "bedrock_model_id" {
+  description = "Bedrock model ID"
+  value       = try(module.bedrock[0].model_id, null)
+}
+
+# Glue Outputs
+output "glue_job_name" {
+  description = "Glue job name"
+  value       = try(module.glue[0].job_name, null)
+}
+
+# SES Outputs
+output "ses_domain_identity" {
+  description = "SES domain identity"
+  value       = try(module.ses[0].domain_identity, null)
+}
+
+# Kendra Outputs
+output "kendra_index_id" {
+  description = "Kendra index ID"
+  value       = try(module.kendra[0].index_id, null)
+}
+
+# CloudTrail Outputs
+output "cloudtrail_arn" {
+  description = "CloudTrail ARN"
+  value       = try(module.cloudtrail[0].trail_arn, null)
+}
+
+# DocumentDB Outputs
+output "documentdb_cluster_endpoint" {
+  description = "DocumentDB cluster endpoint"
+  value       = try(module.documentdb[0].cluster_endpoint, null)
+  sensitive   = true
 }
