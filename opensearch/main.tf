@@ -45,17 +45,23 @@ resource "aws_opensearch_domain" "this" {
   engine_version = var.engine_version
 
   cluster_config {
-    instance_type            = var.instance_type
-    instance_count           = var.instance_count
-    dedicated_master_enabled = var.dedicated_master_enabled
-    master_instance_type     = var.master_instance_type
-    master_instance_count    = var.master_instance_count
-    zone_awareness_enabled   = var.zone_awareness_enabled
+    instance_type          = var.instance_type
+    instance_count        = var.instance_count
+    zone_awareness_enabled = var.zone_awareness_enabled
 
     dynamic "zone_awareness_config" {
       for_each = var.zone_awareness_enabled ? [1] : []
       content {
         availability_zone_count = var.availability_zone_count
+      }
+    }
+
+    dedicated_master_enabled = var.dedicated_master_enabled
+    dynamic "dedicated_master_options" {
+      for_each = var.dedicated_master_enabled ? [1] : []
+      content {
+        instance_type  = var.dedicated_master_instance_type
+        instance_count = var.dedicated_master_instance_count
       }
     }
   }
