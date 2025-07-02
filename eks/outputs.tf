@@ -24,9 +24,19 @@ output "cluster_security_group_id" {
   value       = aws_security_group.cluster_sg.id
 }
 
+output "node_security_group_id" {
+  description = "Security group ID attached to the EKS node group"
+  value       = aws_security_group.node_sg.id
+}
+
 output "cluster_iam_role_arn" {
   description = "IAM role ARN associated with EKS cluster"
   value       = aws_iam_role.cluster_role.arn
+}
+
+output "node_iam_role_arn" {
+  description = "IAM role ARN associated with EKS node group"
+  value       = aws_iam_role.node_role.arn
 }
 
 output "node_group_arn" {
@@ -42,4 +52,14 @@ output "node_group_status" {
 output "cluster_certificate_authority_data" {
   description = "Base64 encoded certificate data required to communicate with the cluster"
   value       = aws_eks_cluster.this.certificate_authority[0].data
+}
+
+output "cluster_name" {
+  description = "Name of the EKS cluster"
+  value       = aws_eks_cluster.this.name
+}
+
+output "oidc_issuer_url" {
+  description = "The URL on the EKS cluster OIDC Issuer"
+  value       = aws_eks_cluster.this.identity[0].oidc[0].issuer
 }

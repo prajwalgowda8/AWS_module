@@ -2,6 +2,7 @@
 variable "db_identifier" {
   description = "Identifier for the RDS instance"
   type        = string
+  default     = "sc-rds-postgres-demo"
 }
 
 variable "engine_version" {
@@ -13,19 +14,19 @@ variable "engine_version" {
 variable "instance_class" {
   description = "RDS instance class"
   type        = string
-  default     = "db.t3.medium"
+  default     = "db.m5.xlarge"
 }
 
 variable "allocated_storage" {
   description = "Initial allocated storage in GB"
   type        = number
-  default     = 20
+  default     = 100
 }
 
 variable "max_allocated_storage" {
   description = "Maximum allocated storage for autoscaling in GB"
   type        = number
-  default     = 100
+  default     = 1000
 }
 
 variable "storage_type" {
@@ -63,19 +64,13 @@ variable "db_username" {
 }
 
 variable "vpc_id" {
-  description = "VPC ID where the RDS instance will be created"
+  description = "VPC ID where the RDS instance will be created (manually created VPC)"
   type        = string
 }
 
 variable "subnet_ids" {
-  description = "List of subnet IDs for the DB subnet group"
+  description = "List of subnet IDs for the DB subnet group (manually created subnets)"
   type        = list(string)
-}
-
-variable "allowed_security_groups" {
-  description = "List of security group IDs allowed to access the database"
-  type        = list(string)
-  default     = []
 }
 
 variable "publicly_accessible" {
@@ -105,13 +100,13 @@ variable "maintenance_window" {
 variable "multi_az" {
   description = "Enable Multi-AZ deployment"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "monitoring_interval" {
   description = "Enhanced monitoring interval in seconds"
   type        = number
-  default     = 0
+  default     = 60
 }
 
 variable "monitoring_role_arn" {
@@ -123,7 +118,7 @@ variable "monitoring_role_arn" {
 variable "performance_insights_enabled" {
   description = "Enable Performance Insights"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "performance_insights_retention_period" {
@@ -144,13 +139,18 @@ variable "db_parameters" {
     name  = string
     value = string
   }))
-  default = []
+  default = [
+    {
+      name  = "shared_preload_libraries"
+      value = "pg_stat_statements"
+    }
+  ]
 }
 
 variable "deletion_protection" {
   description = "Enable deletion protection"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "skip_final_snapshot" {
@@ -171,21 +171,54 @@ variable "auto_minor_version_upgrade" {
   default     = true
 }
 
-variable "mandatory_tags" {
-  description = "Mandatory tags that must be applied to all RDS resources"
-  type        = map(string)
-  validation {
-    condition = alltrue([
-      contains(keys(var.mandatory_tags), "Environment"),
-      contains(keys(var.mandatory_tags), "Project"),
-      contains(keys(var.mandatory_tags), "Owner")
-    ])
-    error_message = "Mandatory tags must include Environment, Project, and Owner."
-  }
-}
-
-variable "additional_tags" {
-  description = "Additional tags to apply to all RDS resources"
+# Mandatory tag variables
+variable "common_tags" {
+  description = "Common tags to be applied to all resources"
   type        = map(string)
   default     = {}
+}
+
+variable "contact_group" {
+  description = "Contact group for the resources"
+  type        = string
+}
+
+variable "contact_name" {
+  description = "Contact name for the resources"
+  type        = string
+}
+
+variable "cost_bucket" {
+  description = "Cost bucket for the resources"
+  type        = string
+}
+
+variable "data_owner" {
+  description = "Data owner for the resources"
+  type        = string
+}
+
+variable "display_name" {
+  description = "Display name for the resources"
+  type        = string
+}
+
+variable "environment" {
+  description = "Environment for the resources"
+  type        = string
+}
+
+variable "has_public_ip" {
+  description = "Whether the resources have public IP"
+  type        = string
+}
+
+variable "has_unisys_network_connection" {
+  description = "Whether the resources have Unisys network connection"
+  type        = string
+}
+
+variable "service_line" {
+  description = "Service line for the resources"
+  type        = string
 }

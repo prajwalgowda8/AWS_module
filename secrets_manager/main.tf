@@ -8,6 +8,60 @@ terraform {
   }
 }
 
+# Local tags configuration
+locals {
+  mandatory_tags = merge(var.common_tags, {
+    contactGroup                = var.contact_group
+    contactName                 = var.contact_name
+    costBucket                  = var.cost_bucket
+    dataOwner                   = var.data_owner
+    displayName                 = var.display_name
+    environment                 = var.environment
+    hasPublicIP                 = var.has_public_ip
+    hasUnisysNetworkConnection  = var.has_unisys_network_connection
+    serviceLine                 = var.service_line
+  })
+  
+  # Generate database secret JSON if using database template
+  database_secret_json = var.database_secret_template && var.database_config != null ? jsonencode({
+    engine   = var.database_config.engine
+    host     = var.database_config.host
+    port     = var.database_config.port
+    dbname   = var.database_config.dbname
+    username = var.database_config.username
+    password = var.database_config.password
+  }) : null
+  
+  # Generate API key secret JSON if using API key template
+  api_key_secret_json = var.api_key_secret_template && var.api_key_config != null ? jsonencode({
+    api_key    = var.api_key_config.api_key
+    api_secret = var.api_key_config.api_secret
+    endpoint   = var.api_key_config.endpoint
+  }) : null
+  
+  # Generate OAuth secret JSON if using OAuth template
+  oauth_secret_json = var.oauth_secret_template && var.oauth_config != null ? jsonencode({
+    client_id     = var.oauth_config.client_id
+    client_secret = var.oauth_config.client_secret
+    token_url     = var.oauth_config.token_url
+    scope         = var.oauth_config.scope
+  }) : null
+  
+  # Determine final secret string
+  final_secret_string = coalesce(
+    var.secret_string,
+    local.database_secret_json,
+    local.api_key_secret_json,
+    local.oauth_secret_json
+  )
+}
+
+# Data source to get current AWS account ID
+data "aws_caller_identity" "current" {}
+
+# Data source to get current AWS region
+data "aws_region" "current" {}
+
 # KMS Key for Secrets Manager encryption
 resource "aws_kms_key" "secrets_manager_key" {
   count = var.create_kms_key ? 1 : 0
@@ -48,10 +102,10 @@ resource "aws_kms_key" "secrets_manager_key" {
   })
 
   tags = merge(
-    var.mandatory_tags,
-    var.additional_tags,
+    local.mandatory_tags,
     {
-      Name = "${var.secret_name}-kms-key"
+      Name    = "${var.secret_name}-kms-key"
+      Purpose = "Database credentials encryption"
     }
   )
 }
@@ -63,9 +117,6 @@ resource "aws_kms_alias" "secrets_manager_key_alias" {
   name          = "alias/${var.secret_name}-secrets-key"
   target_key_id = aws_kms_key.secrets_manager_key[0].key_id
 }
-
-# Data source to get current AWS account ID
-data "aws_caller_identity" "current" {}
 
 # Secrets Manager Secret
 resource "aws_secretsmanager_secret" "this" {
@@ -83,20 +134,21 @@ resource "aws_secretsmanager_secret" "this" {
   }
 
   tags = merge(
-    var.mandatory_tags,
-    var.additional_tags,
+    local.mandatory_tags,
     {
-      Name = var.secret_name
+      Name    = var.secret_name
+      Purpose = "Database credentials storage"
+      Type    = var.secret_type
     }
   )
 }
 
 # Secret Version (initial value)
 resource "aws_secretsmanager_secret_version" "this" {
-  count = var.secret_string != null || var.secret_binary != null ? 1 : 0
+  count = local.final_secret_string != null || var.secret_binary != null ? 1 : 0
 
   secret_id     = aws_secretsmanager_secret.this.id
-  secret_string = var.secret_string
+  secret_string = local.final_secret_string
   secret_binary = var.secret_binary
 
   lifecycle {
@@ -108,16 +160,17 @@ resource "aws_secretsmanager_secret_version" "this" {
 resource "aws_secretsmanager_secret_policy" "this" {
   count = var.secret_policy != null ? 1 : 0
 
-  secret_arn           = aws_secretsmanager_secret.this.arn
-  policy               = var.secret_policy
-  block_public_policy  = var.block_public_policy
+  secret_arn          = aws_secretsmanager_secret.this.arn
+  policy              = var.secret_policy
+  block_public_policy = var.block_public_policy
 }
 
 # IAM Role for Lambda rotation function
 resource "aws_iam_role" "rotation_lambda_role" {
   count = var.enable_automatic_rotation && var.create_rotation_lambda_role ? 1 : 0
 
-  name = "${var.secret_name}-rotation-lambda-role"
+  name        = "${var.secret_name}-rotation-lambda-role"
+  description = "IAM role for Lambda rotation function for ${var.secret_name}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -133,8 +186,7 @@ resource "aws_iam_role" "rotation_lambda_role" {
   })
 
   tags = merge(
-    var.mandatory_tags,
-    var.additional_tags,
+    local.mandatory_tags,
     {
       Name = "${var.secret_name}-rotation-lambda-role"
     }
@@ -281,9 +333,6 @@ resource "aws_iam_role_policy" "rotation_lambda_vpc_policy" {
   })
 }
 
-# Data source to get current AWS region
-data "aws_region" "current" {}
-
 # Secret Rotation Configuration
 resource "aws_secretsmanager_secret_rotation" "this" {
   count = var.enable_automatic_rotation ? 1 : 0
@@ -372,6 +421,82 @@ resource "aws_secretsmanager_secret_policy" "rds_access" {
         Effect = "Allow"
         Principal = {
           Service = "rds.amazonaws.com"
+        }
+        Action = [
+          "secretsmanager:GetSecretValue"
+        ]
+        Resource = "*"
+        Condition = {
+          StringEquals = {
+            "aws:SourceAccount" = data.aws_caller_identity.current.account_id
+          }
+        }
+      }
+    ]
+  })
+}
+
+# Cross-account access policy
+resource "aws_secretsmanager_secret_policy" "cross_account_access" {
+  count = length(var.cross_account_access) > 0 ? 1 : 0
+
+  secret_arn = aws_secretsmanager_secret.this.arn
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AllowCrossAccountAccess"
+        Effect = "Allow"
+        Principal = {
+          AWS = [for account_id in var.cross_account_access : "arn:aws:iam::${account_id}:root"]
+        }
+        Action = [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# Cross-role access policy
+resource "aws_secretsmanager_secret_policy" "cross_role_access" {
+  count = length(var.cross_role_access) > 0 ? 1 : 0
+
+  secret_arn = aws_secretsmanager_secret.this.arn
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AllowCrossRoleAccess"
+        Effect = "Allow"
+        Principal = {
+          AWS = var.cross_role_access
+        }
+        Action = [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# Additional service principals access policy
+resource "aws_secretsmanager_secret_policy" "cross_service_access" {
+  count = length(var.cross_service_principals) > 0 ? 1 : 0
+
+  secret_arn = aws_secretsmanager_secret.this.arn
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AllowCrossServiceAccess"
+        Effect = "Allow"
+        Principal = {
+          Service = var.cross_service_principals
         }
         Action = [
           "secretsmanager:GetSecretValue"

@@ -8,6 +8,21 @@ terraform {
   }
 }
 
+# Local tags configuration
+locals {
+  mandatory_tags = merge(var.common_tags, {
+    contactGroup                = var.contact_group
+    contactName                 = var.contact_name
+    costBucket                  = var.cost_bucket
+    dataOwner                   = var.data_owner
+    displayName                 = var.display_name
+    environment                 = var.environment
+    hasPublicIP                 = var.has_public_ip
+    hasUnisysNetworkConnection  = var.has_unisys_network_connection
+    serviceLine                 = var.service_line
+  })
+}
+
 # EKS Cluster IAM Role
 resource "aws_iam_role" "cluster_role" {
   name = "${var.cluster_name}-cluster-role"
@@ -26,8 +41,7 @@ resource "aws_iam_role" "cluster_role" {
   })
 
   tags = merge(
-    var.mandatory_tags,
-    var.additional_tags,
+    local.mandatory_tags,
     {
       Name = "${var.cluster_name}-cluster-role"
     }
@@ -57,8 +71,7 @@ resource "aws_iam_role" "node_role" {
   })
 
   tags = merge(
-    var.mandatory_tags,
-    var.additional_tags,
+    local.mandatory_tags,
     {
       Name = "${var.cluster_name}-node-role"
     }
@@ -103,8 +116,7 @@ resource "aws_security_group" "cluster_sg" {
   }
 
   tags = merge(
-    var.mandatory_tags,
-    var.additional_tags,
+    local.mandatory_tags,
     {
       Name = "${var.cluster_name}-cluster-sg"
     }
@@ -142,8 +154,7 @@ resource "aws_security_group" "node_sg" {
   }
 
   tags = merge(
-    var.mandatory_tags,
-    var.additional_tags,
+    local.mandatory_tags,
     {
       Name = "${var.cluster_name}-node-sg"
     }
@@ -171,8 +182,7 @@ resource "aws_eks_cluster" "this" {
   ]
 
   tags = merge(
-    var.mandatory_tags,
-    var.additional_tags,
+    local.mandatory_tags,
     {
       Name = var.cluster_name
     }
@@ -208,8 +218,7 @@ resource "aws_eks_node_group" "this" {
   ]
 
   tags = merge(
-    var.mandatory_tags,
-    var.additional_tags,
+    local.mandatory_tags,
     {
       Name = "${var.cluster_name}-nodes"
     }

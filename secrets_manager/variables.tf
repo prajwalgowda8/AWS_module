@@ -2,12 +2,13 @@
 variable "secret_name" {
   description = "Name of the secret"
   type        = string
+  default     = "sc-secrets-dbcreds-demo"
 }
 
 variable "secret_description" {
   description = "Description of the secret"
   type        = string
-  default     = ""
+  default     = "Database credentials storage for sc-secrets-dbcreds-demo"
 }
 
 variable "secret_string" {
@@ -134,7 +135,7 @@ variable "rotate_immediately" {
 variable "secret_type" {
   description = "Type of secret for rotation configuration"
   type        = string
-  default     = "generic"
+  default     = "rds"
   validation {
     condition     = contains(["generic", "rds", "redshift", "documentdb"], var.secret_type)
     error_message = "Secret type must be one of: generic, rds, redshift, documentdb."
@@ -154,19 +155,19 @@ variable "rotation_lambda_vpc_config" {
 variable "allow_lambda_access" {
   description = "Allow Lambda service to access this secret"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "allow_ecs_access" {
   description = "Allow ECS tasks to access this secret"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "allow_rds_access" {
   description = "Allow RDS service to access this secret"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "cross_service_principals" {
@@ -191,7 +192,7 @@ variable "cross_role_access" {
 variable "database_secret_template" {
   description = "Use database secret template structure"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "api_key_secret_template" {
@@ -246,21 +247,54 @@ variable "oauth_config" {
   sensitive = true
 }
 
-variable "mandatory_tags" {
-  description = "Mandatory tags that must be applied to all Secrets Manager resources"
-  type        = map(string)
-  validation {
-    condition = alltrue([
-      contains(keys(var.mandatory_tags), "Environment"),
-      contains(keys(var.mandatory_tags), "Project"),
-      contains(keys(var.mandatory_tags), "Owner")
-    ])
-    error_message = "Mandatory tags must include Environment, Project, and Owner."
-  }
-}
-
-variable "additional_tags" {
-  description = "Additional tags to apply to all Secrets Manager resources"
+# Mandatory tag variables
+variable "common_tags" {
+  description = "Common tags to be applied to all resources"
   type        = map(string)
   default     = {}
+}
+
+variable "contact_group" {
+  description = "Contact group for the resources"
+  type        = string
+}
+
+variable "contact_name" {
+  description = "Contact name for the resources"
+  type        = string
+}
+
+variable "cost_bucket" {
+  description = "Cost bucket for the resources"
+  type        = string
+}
+
+variable "data_owner" {
+  description = "Data owner for the resources"
+  type        = string
+}
+
+variable "display_name" {
+  description = "Display name for the resources"
+  type        = string
+}
+
+variable "environment" {
+  description = "Environment for the resources"
+  type        = string
+}
+
+variable "has_public_ip" {
+  description = "Whether the resources have public IP"
+  type        = string
+}
+
+variable "has_unisys_network_connection" {
+  description = "Whether the resources have Unisys network connection"
+  type        = string
+}
+
+variable "service_line" {
+  description = "Service line for the resources"
+  type        = string
 }
